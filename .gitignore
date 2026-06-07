@@ -1,0 +1,15 @@
+# Dependencies
+node_modules/
+
+# Environment / secrets — NEVER commit
+.env
+.env.local
+
+# SQLite database files (folder kept via db/.gitkeep)
+db/*.db
+db/*.db-journal
+db/*.db-wal
+
+# Backups & OS cruft
+*.bak
+.DS_Store

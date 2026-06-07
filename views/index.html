@@ -1,0 +1,1339 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Meta Ad Library Scraper</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            // Meta / Facebook brand palette
+            meta: {
+              blue: '#1877F2',
+              bluehover: '#166FE5',
+              dark: '#1C2B33',
+              bg: '#F0F2F5',
+              border: '#DADDE1',
+              text: '#050505',
+              muted: '#65676B',
+            },
+          },
+          fontFamily: {
+            sans: ['Helvetica Neue', 'Helvetica', 'Segoe UI', 'system-ui', 'Arial', 'sans-serif'],
+          },
+        },
+      },
+    };
+  </script>
+</head>
+<body class="bg-meta-bg text-meta-text font-sans min-h-screen">
+
+  <!-- ============================ HEADER ============================ -->
+  <header class="bg-white border-b border-meta-border sticky top-0 z-30">
+    <div class="max-w-6xl mx-auto px-4 py-3 flex items-center gap-3">
+      <!-- Meta-style mark -->
+      <div class="w-9 h-9 rounded-full bg-meta-blue flex items-center justify-center text-white font-bold text-lg shadow-sm">M</div>
+      <div>
+        <h1 class="text-xl font-bold leading-tight text-meta-dark">Meta Ad Library</h1>
+        <p class="text-xs text-meta-muted leading-tight">Top-performing ads for DTC brands</p>
+      </div>
+      <button onclick="openSettingsModal()" title="Settings" aria-label="Settings"
+        class="ml-auto w-9 h-9 rounded-full text-meta-muted hover:text-meta-dark hover:bg-meta-bg flex items-center justify-center text-xl transition-colors">⚙️</button>
+    </div>
+
+    <!-- ============================ TABS ============================ -->
+    <nav class="max-w-6xl mx-auto px-4">
+      <div class="flex gap-1">
+        <button id="tab-ads" onclick="switchTab('ads')"
+          class="tab-btn px-5 py-3 text-sm font-semibold text-meta-muted border-b-[3px] border-transparent hover:bg-meta-bg rounded-t-md transition-colors">
+          Ads
+        </button>
+        <button id="tab-bookmarks" onclick="switchTab('bookmarks')"
+          class="tab-btn px-5 py-3 text-sm font-semibold text-meta-muted border-b-[3px] border-transparent hover:bg-meta-bg rounded-t-md transition-colors">
+          Bookmarks
+        </button>
+        <button id="tab-brands" onclick="switchTab('brands')"
+          class="tab-btn px-5 py-3 text-sm font-semibold text-meta-muted border-b-[3px] border-transparent hover:bg-meta-bg rounded-t-md transition-colors">
+          Brands
+        </button>
+      </div>
+    </nav>
+  </header>
+
+  <!-- ============================ MAIN ============================ -->
+  <main class="max-w-6xl mx-auto px-4 py-6">
+
+    <!-- ---------- ADS TAB ---------- -->
+    <section id="panel-ads" class="hidden">
+      <!-- Filter bar -->
+      <div class="bg-white rounded-lg border border-meta-border p-3 mb-4 flex flex-wrap items-end gap-3">
+        <div class="relative" id="brand-filter-wrap">
+          <label class="block text-xs font-semibold text-meta-muted mb-1">Brand</label>
+          <button type="button" id="brand-dd-btn" onclick="toggleBrandDropdown(event)"
+            class="min-w-[12rem] text-left text-sm border border-meta-border rounded-md px-3 py-1.5 bg-white flex items-center justify-between gap-2 focus:outline-none focus:ring-2 focus:ring-meta-blue/40">
+            <span id="brand-dd-label" class="truncate">All brands</span>
+            <span class="text-meta-muted">▾</span>
+          </button>
+          <div id="brand-dd-panel" class="hidden absolute z-30 mt-1 w-64 bg-white border border-meta-border rounded-md shadow-lg">
+            <div class="p-2 border-b border-meta-border">
+              <input id="brand-search" type="text" placeholder="Search brands…" oninput="renderBrandOptions()"
+                class="w-full text-sm border border-meta-border rounded-md px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-meta-blue/40" />
+            </div>
+            <div class="flex gap-3 px-3 py-1.5 border-b border-meta-border text-xs font-semibold">
+              <button type="button" onclick="selectAllBrands()" class="text-meta-blue hover:underline">Select All</button>
+              <button type="button" onclick="clearAllBrands()" class="text-meta-muted hover:underline">Clear All</button>
+            </div>
+            <div id="brand-options" class="max-h-56 overflow-y-auto py-1"></div>
+          </div>
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-meta-muted mb-1">Media</label>
+          <select id="filter-media" onchange="loadAds()"
+            class="text-sm border border-meta-border rounded-md px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-meta-blue/40">
+            <option value="">All</option>
+            <option value="image">Image</option>
+            <option value="video">Video</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-meta-muted mb-1">Sort</label>
+          <select id="filter-sort" onchange="loadAds()"
+            class="text-sm border border-meta-border rounded-md px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-meta-blue/40">
+            <option value="top_ranked">Top Ranked</option>
+            <option value="newest">Newest First</option>
+            <option value="oldest">Oldest First</option>
+          </select>
+        </div>
+
+        <div class="relative" id="tag-filter-wrap">
+          <label class="block text-xs font-semibold text-meta-muted mb-1">AI Tags</label>
+          <button type="button" id="tag-dd-btn" onclick="toggleTagDropdown(event)"
+            class="min-w-[11rem] text-left text-sm border border-meta-border rounded-md px-3 py-1.5 bg-white flex items-center justify-between gap-2 focus:outline-none focus:ring-2 focus:ring-meta-blue/40">
+            <span id="tag-dd-label" class="truncate">All tags</span>
+            <span class="text-meta-muted">▾</span>
+          </button>
+          <div id="tag-dd-panel" class="hidden absolute z-30 mt-1 w-72 bg-white border border-meta-border rounded-md shadow-lg">
+            <div class="flex items-center justify-between px-3 py-1.5 border-b border-meta-border text-xs font-semibold">
+              <span class="text-meta-muted">Filter by AI tags</span>
+              <button type="button" onclick="clearAllTags()" class="text-meta-muted hover:underline">Clear All</button>
+            </div>
+            <div id="tag-options" class="max-h-80 overflow-y-auto py-1"></div>
+          </div>
+        </div>
+
+        <label class="flex items-center gap-1.5 text-sm text-meta-dark ml-1 mb-1.5">
+          <input type="checkbox" id="filter-bookmarked" onchange="loadAds()" class="accent-meta-blue" />
+          Bookmarked only
+        </label>
+        <div class="ml-auto text-sm text-meta-muted" id="ads-count"></div>
+      </div>
+
+      <!-- Selected-brand pills -->
+      <div id="brand-pills" class="flex flex-wrap gap-2 mb-2"></div>
+
+      <!-- Selected AI-tag pills -->
+      <div id="tag-pills" class="flex flex-wrap gap-2 mb-4"></div>
+
+      <!-- Ads grid -->
+      <div id="ads-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+
+      <!-- Loading spinner (shown while fetching a page) -->
+      <div id="ads-spinner" class="hidden flex items-center justify-center gap-2 py-8 text-meta-muted text-sm">
+        <span class="inline-block w-5 h-5 border-2 border-meta-border border-t-meta-blue rounded-full animate-spin"></span>
+        Loading more ads…
+      </div>
+
+      <!-- End-of-list message -->
+      <div id="ads-end" class="hidden text-center text-meta-muted text-sm py-6">You've reached the end — no more ads to load.</div>
+
+      <!-- Sentinel watched by IntersectionObserver to trigger the next page -->
+      <div id="ads-sentinel" class="h-px"></div>
+
+      <div id="ads-empty" class="hidden bg-white rounded-lg border border-meta-border p-12 text-center">
+        <div class="w-14 h-14 mx-auto mb-4 rounded-full bg-meta-bg flex items-center justify-center text-2xl">📊</div>
+        <h2 class="text-lg font-bold text-meta-dark">No ads yet</h2>
+        <p class="text-sm text-meta-muted mt-1 max-w-md mx-auto">
+          Add brands in the
+          <button onclick="switchTab('brands')" class="text-meta-blue font-semibold hover:underline">Brands</button>
+          tab, then hit <span class="font-semibold text-meta-dark">Scrape</span> to pull their ads.
+        </p>
+      </div>
+    </section>
+
+    <!-- ---------- BOOKMARKS TAB ---------- -->
+    <section id="panel-bookmarks" class="hidden">
+      <div class="flex items-center justify-between mb-4">
+        <div>
+          <h2 class="text-lg font-bold text-meta-dark">Bookmarks</h2>
+          <p class="text-sm text-meta-muted">Ads you've saved for later.</p>
+        </div>
+        <div class="flex items-end gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-meta-muted mb-1">Sort</label>
+            <select id="bm-sort" onchange="loadBookmarks()"
+              class="text-sm border border-meta-border rounded-md px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-meta-blue/40">
+              <option value="newest">Newest First</option>
+              <option value="oldest">Oldest First</option>
+              <option value="top_ranked">Top Ranked</option>
+            </select>
+          </div>
+          <div class="text-sm text-meta-muted pb-1.5" id="bm-count"></div>
+        </div>
+      </div>
+
+      <div id="bm-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+
+      <div id="bm-spinner" class="hidden flex items-center justify-center gap-2 py-8 text-meta-muted text-sm">
+        <span class="inline-block w-5 h-5 border-2 border-meta-border border-t-meta-blue rounded-full animate-spin"></span>
+        Loading more…
+      </div>
+      <div id="bm-end" class="hidden text-center text-meta-muted text-sm py-6">That's all your bookmarks.</div>
+      <div id="bm-sentinel" class="h-px"></div>
+
+      <div id="bm-empty" class="hidden bg-white rounded-lg border border-meta-border p-12 text-center">
+        <div class="w-14 h-14 mx-auto mb-4 rounded-full bg-meta-bg flex items-center justify-center text-2xl">★</div>
+        <h2 class="text-lg font-bold text-meta-dark">No bookmarks yet</h2>
+        <p class="text-sm text-meta-muted mt-1 max-w-md mx-auto">
+          Tap the ☆ on any ad in the
+          <button onclick="switchTab('ads')" class="text-meta-blue font-semibold hover:underline">Ads</button>
+          tab to save it here.
+        </p>
+      </div>
+    </section>
+
+    <!-- ---------- BRANDS TAB ---------- -->
+    <section id="panel-brands" class="hidden">
+      <div class="flex items-center justify-between mb-4">
+        <div>
+          <h2 class="text-lg font-bold text-meta-dark">Brands</h2>
+          <p class="text-sm text-meta-muted">DTC brands tracked in the Meta Ad Library.</p>
+        </div>
+        <div class="flex items-center gap-2">
+          <button onclick="openScrapeAllModal()"
+            class="bg-white border border-meta-blue text-meta-blue hover:bg-meta-blue/5 text-sm font-semibold px-4 py-2 rounded-md shadow-sm transition-colors flex items-center gap-2">
+            ⚡ Scrape All
+          </button>
+          <button onclick="openBrandModal()"
+            class="bg-meta-blue hover:bg-meta-bluehover text-white text-sm font-semibold px-4 py-2 rounded-md shadow-sm transition-colors flex items-center gap-2">
+            <span class="text-base leading-none">+</span> Add Brand
+          </button>
+        </div>
+      </div>
+
+      <!-- Brands table -->
+      <div class="bg-white rounded-lg border border-meta-border overflow-hidden">
+        <table class="w-full text-sm">
+          <thead>
+            <tr class="bg-meta-bg text-meta-muted text-left text-xs uppercase tracking-wide">
+              <th class="px-4 py-3 font-semibold">Name</th>
+              <th class="px-4 py-3 font-semibold">Category</th>
+              <th class="px-4 py-3 font-semibold">Facebook Page ID</th>
+              <th class="px-4 py-3 font-semibold text-right">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="brands-tbody" class="divide-y divide-meta-border">
+            <!-- rows injected by JS -->
+          </tbody>
+        </table>
+        <div id="brands-empty" class="hidden px-4 py-12 text-center text-meta-muted text-sm">
+          No brands yet. Click <span class="font-semibold text-meta-dark">Add Brand</span> to get started.
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- ============================ BRAND MODAL ============================ -->
+  <div id="brand-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4">
+    <!-- backdrop -->
+    <div class="absolute inset-0 bg-black/50" onclick="closeBrandModal()"></div>
+
+    <!-- dialog -->
+    <div class="relative bg-white rounded-lg shadow-xl w-full max-w-lg">
+      <div class="flex items-center justify-between px-5 py-4 border-b border-meta-border">
+        <h3 id="modal-title" class="text-lg font-bold text-meta-dark">Add Brand</h3>
+        <button onclick="closeBrandModal()" class="text-meta-muted hover:text-meta-text text-2xl leading-none">&times;</button>
+      </div>
+
+      <form id="brand-form" onsubmit="submitBrand(event)" class="px-5 py-4 space-y-4">
+        <input type="hidden" id="brand-id" />
+
+        <div>
+          <label class="block text-sm font-semibold text-meta-dark mb-1">Brand Name <span class="text-red-500">*</span></label>
+          <input id="brand-name" type="text" required placeholder="e.g. Glossier"
+            class="w-full px-3 py-2 border border-meta-border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-meta-blue/50 focus:border-meta-blue" />
+        </div>
+
+        <div>
+          <label class="block text-sm font-semibold text-meta-dark mb-1">Meta Ads Library URL <span class="text-red-500">*</span></label>
+          <input id="brand-url" type="url" required placeholder="https://www.facebook.com/ads/library/?...&view_all_page_id=..."
+            class="w-full px-3 py-2 border border-meta-border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-meta-blue/50 focus:border-meta-blue" />
+          <p class="text-xs text-meta-muted mt-1">This is the URL Apify uses to scrape the brand's ads.</p>
+        </div>
+
+        <div>
+          <label class="block text-sm font-semibold text-meta-dark mb-1">Category</label>
+          <input id="brand-category" type="text" placeholder="e.g. Beauty, Beverage, Apparel"
+            class="w-full px-3 py-2 border border-meta-border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-meta-blue/50 focus:border-meta-blue" />
+        </div>
+
+        <p id="modal-error" class="hidden text-sm text-red-600 bg-red-50 border border-red-200 rounded-md px-3 py-2"></p>
+
+        <div class="flex justify-end gap-2 pt-2">
+          <button type="button" onclick="closeBrandModal()"
+            class="px-4 py-2 text-sm font-semibold text-meta-dark bg-meta-bg hover:bg-meta-border rounded-md transition-colors">Cancel</button>
+          <button type="submit" id="modal-submit"
+            class="px-4 py-2 text-sm font-semibold text-white bg-meta-blue hover:bg-meta-bluehover rounded-md shadow-sm transition-colors">Save Brand</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ============================ SCRAPE-ALL MODAL ============================ -->
+  <div id="scrapeall-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div class="absolute inset-0 bg-black/50" onclick="closeScrapeAllModal()"></div>
+    <div class="relative bg-white rounded-lg shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+      <div class="flex items-center justify-between px-5 py-3 border-b border-meta-border">
+        <h3 id="scrapeall-title" class="text-lg font-bold text-meta-dark">Scrape All Brands</h3>
+        <button onclick="closeScrapeAllModal()" class="text-meta-muted hover:text-meta-text text-2xl leading-none">&times;</button>
+      </div>
+      <div id="scrapeall-body" class="px-5 py-4"></div>
+    </div>
+  </div>
+
+  <!-- ============================ AD DETAIL MODAL ============================ -->
+  <div id="ad-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div class="absolute inset-0 bg-black/60" onclick="closeAdModal()"></div>
+    <div class="relative bg-white rounded-lg shadow-xl w-full max-w-3xl max-h-[90vh] overflow-y-auto">
+      <div class="flex items-center justify-between px-5 py-3 border-b border-meta-border sticky top-0 bg-white">
+        <h3 class="text-lg font-bold text-meta-dark">Ad details</h3>
+        <button onclick="closeAdModal()" class="text-meta-muted hover:text-meta-text text-2xl leading-none">&times;</button>
+      </div>
+      <div id="ad-modal-body" class="px-5 py-4"></div>
+    </div>
+  </div>
+
+  <!-- ============================ SETTINGS MODAL (placeholder) ============================ -->
+  <div id="settings-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div class="absolute inset-0 bg-black/50" onclick="closeSettingsModal()"></div>
+    <div class="relative bg-white rounded-lg shadow-xl w-full max-w-md max-h-[90vh] overflow-y-auto">
+      <div class="flex items-center justify-between px-5 py-3 border-b border-meta-border">
+        <h3 class="text-lg font-bold text-meta-dark">Settings</h3>
+        <button onclick="closeSettingsModal()" class="text-meta-muted hover:text-meta-text text-2xl leading-none">&times;</button>
+      </div>
+      <div class="px-5 py-4 space-y-5">
+        <!-- Integration status (live) -->
+        <div>
+          <p class="text-xs font-semibold text-meta-muted uppercase tracking-wide mb-2">Integrations</p>
+          <div class="space-y-1.5 text-sm">
+            <div class="flex items-center justify-between">
+              <span class="text-meta-dark">Apify (scraping)</span>
+              <span id="settings-apify" class="text-meta-muted">checking…</span>
+            </div>
+            <div class="flex items-center justify-between">
+              <span class="text-meta-dark">Gemini (AI analysis)</span>
+              <span id="settings-gemini" class="text-meta-muted">checking…</span>
+            </div>
+            <div class="flex items-center justify-between">
+              <span class="text-meta-dark">AI model</span>
+              <span class="text-meta-muted font-mono text-xs">gemini-2.5-flash</span>
+            </div>
+          </div>
+          <p class="text-xs text-meta-muted mt-2">Keys are configured server-side via environment variables.</p>
+        </div>
+
+        <!-- Future config (placeholders, disabled) -->
+        <div class="opacity-60">
+          <p class="text-xs font-semibold text-meta-muted uppercase tracking-wide mb-2">Preferences (coming soon)</p>
+          <div class="space-y-3 text-sm">
+            <label class="flex items-center justify-between gap-3">
+              <span class="text-meta-dark">Ads per scrape</span>
+              <input type="number" value="20" disabled class="w-20 border border-meta-border rounded-md px-2 py-1 text-sm bg-meta-bg cursor-not-allowed" />
+            </label>
+            <label class="flex items-center justify-between gap-3">
+              <span class="text-meta-dark">Auto-analyze new ads</span>
+              <input type="checkbox" disabled class="accent-meta-blue cursor-not-allowed" />
+            </label>
+          </div>
+        </div>
+
+        <div class="flex justify-end pt-1">
+          <button onclick="closeSettingsModal()" class="px-4 py-2 text-sm font-semibold text-white bg-meta-blue hover:bg-meta-bluehover rounded-md shadow-sm">Close</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================ TOASTS ============================ -->
+  <div id="toast-container" class="fixed bottom-5 right-5 z-[60] flex flex-col gap-2 items-end" aria-live="polite"></div>
+
+  <!-- ============================ SCRIPT ============================ -->
+  <script>
+    // ---------- Tab switching ----------
+    function switchTab(tab) {
+      currentTab = tab;
+      document.getElementById('panel-ads').classList.toggle('hidden', tab !== 'ads');
+      document.getElementById('panel-bookmarks').classList.toggle('hidden', tab !== 'bookmarks');
+      document.getElementById('panel-brands').classList.toggle('hidden', tab !== 'brands');
+
+      for (const btn of document.querySelectorAll('.tab-btn')) {
+        const active = btn.id === `tab-${tab}`;
+        btn.classList.toggle('text-meta-blue', active);
+        btn.classList.toggle('border-meta-blue', active);
+        btn.classList.toggle('text-meta-muted', !active);
+      }
+      if (tab === 'brands') loadBrands();
+      if (tab === 'ads') { populateBrandFilter(); loadAds(); }
+      if (tab === 'bookmarks') loadBookmarks();
+    }
+
+    // ---------- Shared state ----------
+    let adsById = {};                       // current Ads-tab results, keyed by ad id (for the detail modal)
+    let allBrands = [];                      // all brands, for the multi-select filter
+    let selectedBrandIds = new Set();        // brand ids (strings) currently filtered on
+
+    // ---------- Infinite-scroll pagination ----------
+    const ADS_PAGE_SIZE = 50;
+    let currentTab = 'brands';
+    const byId = (id) => document.getElementById(id);
+
+    // ---------- Toast helper (typed, stacking, auto-dismiss) ----------
+    function toast(msg, type = 'info') {
+      const container = document.getElementById('toast-container');
+      if (!container) return;
+      const styles = { success: 'bg-green-600', error: 'bg-red-600', info: 'bg-meta-dark' };
+      const icons = { success: '✓', error: '⚠', info: 'ℹ' };
+      const el = document.createElement('div');
+      el.className = `flex items-center gap-2 text-white text-sm px-4 py-2.5 rounded-md shadow-lg max-w-sm transition-opacity duration-300 ${styles[type] || styles.info}`;
+      el.setAttribute('role', 'status');
+      const icon = document.createElement('span');
+      icon.textContent = icons[type] || icons.info;
+      const text = document.createElement('span');
+      text.textContent = msg;            // textContent => safe against HTML injection
+      el.append(icon, text);
+      container.appendChild(el);
+      // auto-dismiss with fade
+      setTimeout(() => {
+        el.style.opacity = '0';
+        setTimeout(() => el.remove(), 300);
+      }, type === 'error' ? 4200 : 2800);  // errors linger a bit longer
+    }
+
+    // ---------- Button loading state (inline spinner) ----------
+    function setBtnLoading(btn, loading, label) {
+      if (!btn) return;
+      if (loading) {
+        if (btn.dataset.orig === undefined) btn.dataset.orig = btn.innerHTML;
+        btn.disabled = true;
+        btn.classList.add('opacity-70', 'cursor-not-allowed');
+        btn.innerHTML = `<span class="inline-block w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin align-[-2px]"></span> ${label || 'Working…'}`;
+      } else {
+        btn.disabled = false;
+        btn.classList.remove('opacity-70', 'cursor-not-allowed');
+        if (btn.dataset.orig !== undefined) { btn.innerHTML = btn.dataset.orig; delete btn.dataset.orig; }
+      }
+    }
+
+    // ---------- Settings modal (placeholder) ----------
+    async function openSettingsModal() {
+      document.getElementById('settings-modal').classList.remove('hidden');
+      const apifyEl = document.getElementById('settings-apify');
+      const geminiEl = document.getElementById('settings-gemini');
+      apifyEl.textContent = 'checking…'; geminiEl.textContent = 'checking…';
+      const ok = '<span class="text-green-600 font-semibold">Connected</span>';
+      const no = '<span class="text-red-600 font-semibold">Not configured</span>';
+      try {
+        const h = await (await fetch('/api/health')).json();
+        apifyEl.innerHTML = h.apify_configured ? ok : no;
+        geminiEl.innerHTML = h.gemini_configured ? ok : no;
+      } catch (e) {
+        apifyEl.textContent = 'unknown'; geminiEl.textContent = 'unknown';
+      }
+    }
+    function closeSettingsModal() {
+      document.getElementById('settings-modal').classList.add('hidden');
+    }
+
+    // ---------- Load + render brands ----------
+    async function loadBrands() {
+      const tbody = document.getElementById('brands-tbody');
+      const empty = document.getElementById('brands-empty');
+      tbody.innerHTML = `<tr><td colspan="4" class="px-4 py-8 text-center text-meta-muted text-sm">Loading…</td></tr>`;
+      try {
+        const res = await fetch('/api/brands');
+        const brands = await res.json();
+
+        if (!Array.isArray(brands) || brands.length === 0) {
+          tbody.innerHTML = '';
+          empty.classList.remove('hidden');
+          return;
+        }
+        empty.classList.add('hidden');
+        tbody.innerHTML = brands.map(renderRow).join('');
+      } catch (err) {
+        tbody.innerHTML = `<tr><td colspan="4" class="px-4 py-8 text-center text-red-600 text-sm">Failed to load brands.</td></tr>`;
+      }
+    }
+
+    function esc(s) {
+      return String(s ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+    }
+
+    function renderRow(b) {
+      const cat = b.category
+        ? `<span class="inline-block bg-meta-bg text-meta-dark text-xs px-2 py-0.5 rounded">${esc(b.category)}</span>`
+        : '<span class="text-meta-muted">—</span>';
+      // pass the brand to editBrand via a data attribute to avoid quoting issues
+      const json = esc(JSON.stringify(b));
+      return `
+        <tr class="hover:bg-meta-bg/60">
+          <td class="px-4 py-3 font-semibold text-meta-dark">${esc(b.name)}</td>
+          <td class="px-4 py-3">${cat}</td>
+          <td class="px-4 py-3 text-meta-muted font-mono text-xs">${esc(b.facebook_page_id || '—')}</td>
+          <td class="px-4 py-3">
+            <div class="flex justify-end items-center gap-3">
+              <button id="scrape-btn-${Number(b.id)}" onclick="scrapeBrand(${Number(b.id)}, this)"
+                class="bg-meta-blue hover:bg-meta-bluehover text-white text-xs font-semibold px-3 py-1.5 rounded-md shadow-sm transition-colors disabled:opacity-60 disabled:cursor-not-allowed">
+                Scrape
+              </button>
+              <button data-brand="${json}" onclick="editBrand(this)"
+                class="text-meta-blue hover:underline text-sm font-semibold">Edit</button>
+              <button onclick="deleteBrand(${Number(b.id)}, '${esc(b.name)}')"
+                class="text-red-600 hover:underline text-sm font-semibold">Delete</button>
+            </div>
+          </td>
+        </tr>`;
+    }
+
+    // ---------- Modal: open / close ----------
+    function openBrandModal() {
+      document.getElementById('brand-form').reset();
+      document.getElementById('brand-id').value = '';
+      document.getElementById('modal-title').textContent = 'Add Brand';
+      document.getElementById('modal-submit').textContent = 'Save Brand';
+      hideModalError();
+      document.getElementById('brand-modal').classList.remove('hidden');
+      document.getElementById('brand-name').focus();
+    }
+
+    function editBrand(btnEl) {
+      const b = JSON.parse(btnEl.getAttribute('data-brand'));
+      document.getElementById('brand-form').reset();
+      document.getElementById('brand-id').value = b.id;
+      document.getElementById('brand-name').value = b.name || '';
+      document.getElementById('brand-url').value = b.meta_ad_library_url || '';
+      document.getElementById('brand-category').value = b.category || '';
+      document.getElementById('modal-title').textContent = 'Edit Brand';
+      document.getElementById('modal-submit').textContent = 'Update Brand';
+      hideModalError();
+      document.getElementById('brand-modal').classList.remove('hidden');
+      document.getElementById('brand-name').focus();
+    }
+
+    function closeBrandModal() {
+      document.getElementById('brand-modal').classList.add('hidden');
+    }
+
+    function showModalError(msg) {
+      const el = document.getElementById('modal-error');
+      el.textContent = msg;
+      el.classList.remove('hidden');
+    }
+    function hideModalError() {
+      document.getElementById('modal-error').classList.add('hidden');
+    }
+
+    // close modals on Escape
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape') { closeBrandModal(); closeAdModal(); closeScrapeAllModal(); closeSettingsModal(); }
+    });
+
+    // ---------- Modal: submit (create or update) ----------
+    async function submitBrand(e) {
+      e.preventDefault();
+      hideModalError();
+
+      const id = document.getElementById('brand-id').value;
+      const payload = {
+        name: document.getElementById('brand-name').value.trim(),
+        meta_ad_library_url: document.getElementById('brand-url').value.trim(),
+        category: document.getElementById('brand-category').value.trim() || null,
+      };
+
+      const btn = document.getElementById('modal-submit');
+      setBtnLoading(btn, true, id ? 'Updating…' : 'Saving…');
+
+      try {
+        const res = await fetch(id ? `/api/brands/${id}` : '/api/brands', {
+          method: id ? 'PUT' : 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          showModalError(data.error || 'Something went wrong.');
+          return;
+        }
+        closeBrandModal();
+        toast(id ? 'Brand updated' : 'Brand added', 'success');
+        loadBrands();
+      } catch (err) {
+        showModalError('Network error. Is the server running?');
+      } finally {
+        setBtnLoading(btn, false);
+      }
+    }
+
+    // ---------- Delete ----------
+    async function deleteBrand(id, name) {
+      if (!confirm(`Delete "${name}"? This cannot be undone.`)) return;
+      try {
+        const res = await fetch(`/api/brands/${id}`, { method: 'DELETE' });
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}));
+          toast(data.error || 'Failed to delete brand', 'error');
+          return;
+        }
+        toast('Brand deleted', 'success');
+        loadBrands();
+      } catch (err) {
+        toast('Network error while deleting', 'error');
+      }
+    }
+
+    // ---------- Scrape: start job, then poll for completion ----------
+    const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+    async function scrapeBrand(id, btn) {
+      setBtnLoading(btn, true, 'Starting…');
+
+      try {
+        // 1) Kick off the scrape job (scrapes by the brand's page ID)
+        const startRes = await fetch(`/api/brands/${id}/scrape`, { method: 'POST' });
+        const start = await startRes.json();
+        if (!startRes.ok) {
+          toast(start.error || 'Failed to start scrape', 'error');
+          return;
+        }
+
+        const jobId = start.job_id;
+        setBtnLoading(btn, true, 'Scraping…');
+
+        // 2) Poll the job status until it finishes (or we give up)
+        const maxAttempts = 60;          // ~5 min at 5s intervals
+        const intervalMs = 5000;
+        for (let attempt = 0; attempt < maxAttempts; attempt++) {
+          await sleep(intervalMs);
+          let status;
+          try {
+            const checkRes = await fetch(`/api/scrape-jobs/${jobId}/check`, { method: 'POST' });
+            status = await checkRes.json();
+          } catch (e) {
+            continue; // transient network error — keep polling
+          }
+
+          if (status.status === 'completed') {
+            toast(`Scrape done — ${status.ads_saved} new of ${status.ads_found} ads`, 'success');
+            if (currentTab === 'ads') loadAds();
+            return;
+          }
+          if (status.status === 'failed') {
+            toast(`Scrape failed: ${status.error || 'unknown error'}`, 'error');
+            return;
+          }
+          // still running → heartbeat on the button
+          setBtnLoading(btn, true, `Scraping… (${attempt + 1})`);
+        }
+        toast('Still running on Apify — check back shortly', 'info');
+      } catch (err) {
+        toast('Network error while scraping', 'error');
+      } finally {
+        setBtnLoading(btn, false);
+      }
+    }
+
+    // ---------- Scrape All: confirm → sequential progress → summary ----------
+    let scrapeAllRunning = false;
+    let scrapeAllList = [];      // active brands to scrape
+    let scrapeAllProgress = [];  // per-brand status objects
+
+    async function openScrapeAllModal() {
+      let brands = [];
+      try { brands = await (await fetch('/api/brands')).json(); } catch (e) {}
+      scrapeAllList = (Array.isArray(brands) ? brands : []).filter(b => b.is_active);
+      byId('scrapeall-title').textContent = 'Scrape All Brands';
+      renderScrapeAllConfirm();
+      byId('scrapeall-modal').classList.remove('hidden');
+    }
+
+    function closeScrapeAllModal() {
+      if (scrapeAllRunning) return; // don't allow closing mid-run
+      byId('scrapeall-modal').classList.add('hidden');
+      // Refresh whatever's on screen so new ads show up
+      if (currentTab === 'brands') loadBrands();
+      else if (currentTab === 'ads') loadAds();
+      else if (currentTab === 'bookmarks') loadBookmarks();
+    }
+
+    function renderScrapeAllConfirm() {
+      const n = scrapeAllList.length;
+      const body = byId('scrapeall-body');
+      if (n === 0) {
+        body.innerHTML = `<p class="text-sm text-meta-muted">No active brands to scrape. Add a brand first.</p>
+          <div class="flex justify-end mt-4"><button onclick="closeScrapeAllModal()" class="px-4 py-2 text-sm font-semibold text-meta-dark bg-meta-bg hover:bg-meta-border rounded-md">Close</button></div>`;
+        return;
+      }
+      body.innerHTML = `
+        <div class="flex items-start gap-3">
+          <div class="w-9 h-9 shrink-0 rounded-full bg-yellow-100 flex items-center justify-center text-lg">⚠️</div>
+          <div>
+            <p class="text-sm text-meta-text">This will scrape <strong>${n} active brand${n === 1 ? '' : 's'}</strong> one at a time via Apify.</p>
+            <p class="text-sm text-meta-muted mt-1">Each scrape <strong>uses Apify credits</strong> and can take a minute or two per brand.</p>
+          </div>
+        </div>
+        <ul class="mt-3 text-sm text-meta-muted list-disc pl-6 max-h-32 overflow-y-auto">
+          ${scrapeAllList.map(b => `<li>${esc(b.name)}</li>`).join('')}
+        </ul>
+        <div class="flex justify-end gap-2 mt-5">
+          <button onclick="closeScrapeAllModal()" class="px-4 py-2 text-sm font-semibold text-meta-dark bg-meta-bg hover:bg-meta-border rounded-md">Cancel</button>
+          <button onclick="startScrapeAll()" class="px-4 py-2 text-sm font-semibold text-white bg-meta-blue hover:bg-meta-bluehover rounded-md shadow-sm">Scrape ${n} Brand${n === 1 ? '' : 's'}</button>
+        </div>`;
+    }
+
+    function scrapeRowHtml(p) {
+      let icon, text;
+      if (p.status === 'pending') {
+        icon = '<span class="w-4 h-4 rounded-full border border-meta-border inline-block"></span>';
+        text = '<span class="text-meta-muted">Pending</span>';
+      } else if (p.status === 'scraping') {
+        icon = '<span class="inline-block w-4 h-4 border-2 border-meta-border border-t-meta-blue rounded-full animate-spin"></span>';
+        text = `<span class="text-meta-blue">Scraping…${p.note ? ' ' + esc(p.note) : ''}</span>`;
+      } else if (p.status === 'done') {
+        icon = '<span class="text-green-600">✓</span>';
+        text = `<span class="text-meta-dark">${p.found} found, ${p.saved} new</span>`;
+      } else {
+        icon = '<span class="text-red-600">✗</span>';
+        text = `<span class="text-red-600">${esc(p.error || 'Failed')}</span>`;
+      }
+      return `<div class="flex items-center gap-2 text-sm">
+          <span class="w-5 flex justify-center">${icon}</span>
+          <span class="font-semibold text-meta-dark flex-1 truncate">${esc(p.name)}</span>
+          ${text}
+        </div>`;
+    }
+
+    function renderScrapeAllProgress(idx) {
+      const total = scrapeAllProgress.length;
+      byId('scrapeall-body').innerHTML = `
+        <p class="text-sm font-semibold text-meta-dark mb-3">Scraping brand ${Math.min(idx + 1, total)} of ${total}…</p>
+        <div class="space-y-2 max-h-72 overflow-y-auto">${scrapeAllProgress.map(scrapeRowHtml).join('')}</div>
+        <p class="text-xs text-meta-muted mt-3">Please keep this open until it finishes.</p>`;
+    }
+
+    function renderScrapeAllSummary() {
+      const ok = scrapeAllProgress.filter(p => p.status === 'done');
+      const failed = scrapeAllProgress.filter(p => p.status === 'failed');
+      const totalFound = ok.reduce((a, p) => a + p.found, 0);
+      const totalSaved = ok.reduce((a, p) => a + p.saved, 0);
+      byId('scrapeall-title').textContent = 'Scrape Complete';
+      byId('scrapeall-body').innerHTML = `
+        <div class="grid grid-cols-3 gap-3 text-center mb-4">
+          <div class="bg-meta-bg rounded-md p-3"><div class="text-2xl font-bold text-meta-dark">${ok.length}/${scrapeAllProgress.length}</div><div class="text-xs text-meta-muted">brands</div></div>
+          <div class="bg-meta-bg rounded-md p-3"><div class="text-2xl font-bold text-meta-dark">${totalFound}</div><div class="text-xs text-meta-muted">ads found</div></div>
+          <div class="bg-meta-bg rounded-md p-3"><div class="text-2xl font-bold text-meta-dark">${totalSaved}</div><div class="text-xs text-meta-muted">new ads</div></div>
+        </div>
+        <div class="space-y-2 max-h-56 overflow-y-auto mb-4">${scrapeAllProgress.map(scrapeRowHtml).join('')}</div>
+        <div class="flex justify-end"><button onclick="closeScrapeAllModal()" class="px-4 py-2 text-sm font-semibold text-white bg-meta-blue hover:bg-meta-bluehover rounded-md shadow-sm">Done</button></div>`;
+    }
+
+    // Run one brand's scrape and poll to completion. Returns {found, saved} or throws.
+    async function runOneBrandScrape(brandId, onPoll) {
+      const startRes = await fetch(`/api/brands/${brandId}/scrape`, { method: 'POST' });
+      const start = await startRes.json();
+      if (!startRes.ok) throw new Error(start.error || 'Failed to start');
+      const jobId = start.job_id;
+
+      const maxAttempts = 60, intervalMs = 5000;
+      for (let attempt = 0; attempt < maxAttempts; attempt++) {
+        await sleep(intervalMs);
+        let status;
+        try {
+          status = await (await fetch(`/api/scrape-jobs/${jobId}/check`, { method: 'POST' })).json();
+        } catch (e) { continue; }
+        if (status.status === 'completed') return { found: status.ads_found || 0, saved: status.ads_saved || 0 };
+        if (status.status === 'failed') throw new Error(status.error || 'Scrape failed');
+        if (onPoll) onPoll(attempt + 1);
+      }
+      throw new Error('Timed out waiting for Apify');
+    }
+
+    async function startScrapeAll() {
+      scrapeAllRunning = true;
+      scrapeAllProgress = scrapeAllList.map(b => ({ id: b.id, name: b.name, status: 'pending', found: 0, saved: 0, error: null, note: '' }));
+      byId('scrapeall-title').textContent = 'Scraping…';
+      renderScrapeAllProgress(0);
+
+      for (let i = 0; i < scrapeAllProgress.length; i++) {
+        const p = scrapeAllProgress[i];
+        p.status = 'scraping';
+        renderScrapeAllProgress(i);
+        try {
+          const r = await runOneBrandScrape(p.id, (attempt) => { p.note = `(${attempt})`; renderScrapeAllProgress(i); });
+          p.status = 'done'; p.found = r.found; p.saved = r.saved; p.note = '';
+        } catch (e) {
+          p.status = 'failed'; p.error = e.message;
+        }
+        renderScrapeAllProgress(i);
+      }
+
+      scrapeAllRunning = false;
+      renderScrapeAllSummary();
+
+      const ok = scrapeAllProgress.filter(p => p.status === 'done');
+      const failed = scrapeAllProgress.length - ok.length;
+      const totalFound = ok.reduce((a, p) => a + p.found, 0);
+      toast(
+        `Scrape complete — ${totalFound} ads across ${ok.length} brand${ok.length === 1 ? '' : 's'}` + (failed ? `, ${failed} failed` : ''),
+        failed ? 'error' : 'success'
+      );
+    }
+
+    // ============================ ADS TAB ============================
+
+    // ---------- Brand multi-select filter ----------
+
+    // Load brands, then refresh options/pills/label (keeps the current selection)
+    async function populateBrandFilter() {
+      try {
+        allBrands = await (await fetch('/api/brands')).json();
+      } catch (e) { allBrands = []; }
+      // Drop any selected ids that no longer exist
+      const valid = new Set(allBrands.map(b => String(b.id)));
+      for (const id of [...selectedBrandIds]) if (!valid.has(id)) selectedBrandIds.delete(id);
+      renderBrandOptions();
+      renderBrandPills();
+      updateBrandLabel();
+      applyDefaultSort();
+    }
+
+    function toggleBrandDropdown(e) {
+      e.stopPropagation();
+      const panel = document.getElementById('brand-dd-panel');
+      const opening = panel.classList.contains('hidden');
+      panel.classList.toggle('hidden');
+      if (opening) {
+        const search = document.getElementById('brand-search');
+        search.value = '';
+        renderBrandOptions();
+        search.focus();
+      }
+    }
+
+    function renderBrandOptions() {
+      const q = (document.getElementById('brand-search').value || '').toLowerCase().trim();
+      const list = document.getElementById('brand-options');
+      const matches = allBrands.filter(b => b.name.toLowerCase().includes(q));
+      if (matches.length === 0) {
+        list.innerHTML = `<div class="px-3 py-3 text-sm text-meta-muted text-center">No brands found</div>`;
+        return;
+      }
+      list.innerHTML = matches.map(b => {
+        const id = String(b.id);
+        const checked = selectedBrandIds.has(id) ? 'checked' : '';
+        return `
+          <label class="flex items-center gap-2 px-3 py-1.5 text-sm hover:bg-meta-bg cursor-pointer">
+            <input type="checkbox" ${checked} onchange="toggleBrand('${id}')" class="accent-meta-blue" />
+            <span class="truncate">${esc(b.name)}</span>
+          </label>`;
+      }).join('');
+    }
+
+    function toggleBrand(id) {
+      if (selectedBrandIds.has(id)) selectedBrandIds.delete(id);
+      else selectedBrandIds.add(id);
+      renderBrandPills();
+      updateBrandLabel();
+      applyDefaultSort();
+      loadAds();
+    }
+
+    function selectAllBrands() {
+      // Respect the current search filter — select what's visible
+      const q = (document.getElementById('brand-search').value || '').toLowerCase().trim();
+      allBrands.filter(b => b.name.toLowerCase().includes(q)).forEach(b => selectedBrandIds.add(String(b.id)));
+      renderBrandOptions(); renderBrandPills(); updateBrandLabel(); applyDefaultSort(); loadAds();
+    }
+
+    function clearAllBrands() {
+      selectedBrandIds.clear();
+      renderBrandOptions(); renderBrandPills(); updateBrandLabel(); applyDefaultSort(); loadAds();
+    }
+
+    function updateBrandLabel() {
+      const label = document.getElementById('brand-dd-label');
+      const n = selectedBrandIds.size;
+      if (n === 0) { label.textContent = 'All brands'; return; }
+      if (n === 1) {
+        const b = allBrands.find(x => String(x.id) === [...selectedBrandIds][0]);
+        label.textContent = b ? b.name : '1 brand';
+        return;
+      }
+      label.textContent = `${n} brands selected`;
+    }
+
+    function renderBrandPills() {
+      const wrap = document.getElementById('brand-pills');
+      if (selectedBrandIds.size === 0) { wrap.innerHTML = ''; return; }
+      wrap.innerHTML = [...selectedBrandIds].map(id => {
+        const b = allBrands.find(x => String(x.id) === id);
+        if (!b) return '';
+        return `
+          <span class="inline-flex items-center gap-1.5 bg-meta-blue/10 text-meta-blue text-xs font-semibold px-2.5 py-1 rounded-full">
+            ${esc(b.name)}
+            <button onclick="toggleBrand('${id}')" title="Remove" class="hover:text-meta-bluehover text-sm leading-none">&times;</button>
+          </span>`;
+      }).join('');
+    }
+
+    // Context-aware default sort: a single brand shows its impression rank
+    // (1-10), which isn't comparable across brands — so multi/none defaults to
+    // Newest First. Re-applied whenever the brand selection changes.
+    function applyDefaultSort() {
+      document.getElementById('filter-sort').value =
+        selectedBrandIds.size === 1 ? 'top_ranked' : 'newest';
+    }
+
+    // ---------- AI-tag multi-select filter ----------
+
+    function toggleTagDropdown(e) {
+      e.stopPropagation();
+      byId('tag-dd-panel').classList.toggle('hidden');
+    }
+
+    // Build the expandable category list once; we keep checkboxes in sync in place.
+    function renderTagOptions() {
+      byId('tag-options').innerHTML = Object.keys(AI_TAXONOMY).map((dim) => {
+        const items = AI_TAXONOMY[dim].map((v) => {
+          const checked = selectedTags[dim].has(v) ? 'checked' : '';
+          return `<label class="flex items-center gap-2 px-3 py-1 text-sm hover:bg-meta-bg cursor-pointer">
+              <input type="checkbox" ${checked} value="${esc(v)}" data-dim="${dim}"
+                onchange="toggleTagValue('${dim}', this.value)" class="accent-meta-blue" />
+              <span>${esc(v)}</span>
+            </label>`;
+        }).join('');
+        return `<details class="border-b border-meta-border last:border-0">
+            <summary class="px-3 py-2 text-sm font-semibold text-meta-dark cursor-pointer">${AI_LABELS[dim]}</summary>
+            <div class="pb-1">${items}</div>
+          </details>`;
+      }).join('');
+    }
+
+    function toggleTagValue(dim, value) {
+      const set = selectedTags[dim];
+      if (set.has(value)) set.delete(value); else set.add(value);
+      // Keep the matching checkbox in sync (needed when toggled from a pill)
+      const cb = byId('tag-options').querySelector(`input[data-dim="${dim}"][value="${cssEscape(value)}"]`);
+      if (cb) cb.checked = set.has(value);
+      renderTagPills();
+      updateTagLabel();
+      loadAds();
+    }
+
+    function clearAllTags() {
+      for (const d in selectedTags) selectedTags[d].clear();
+      byId('tag-options').querySelectorAll('input[type=checkbox]').forEach((cb) => { cb.checked = false; });
+      renderTagPills();
+      updateTagLabel();
+      loadAds();
+    }
+
+    function countSelectedTags() {
+      return Object.values(selectedTags).reduce((n, s) => n + s.size, 0);
+    }
+
+    function updateTagLabel() {
+      const n = countSelectedTags();
+      byId('tag-dd-label').textContent = n === 0 ? 'All tags' : `${n} tag${n === 1 ? '' : 's'} selected`;
+    }
+
+    function renderTagPills() {
+      const pills = [];
+      for (const dim of Object.keys(selectedTags)) {
+        for (const v of selectedTags[dim]) {
+          pills.push(`<span class="inline-flex items-center gap-1.5 bg-white border border-meta-border text-meta-dark text-xs font-semibold px-2.5 py-1 rounded-full">
+              <span class="text-meta-muted font-normal">${AI_LABELS[dim]}:</span> ${esc(v)}
+              <button onclick="toggleTagValue('${dim}', '${esc(v)}')" title="Remove" class="hover:text-red-600 text-sm leading-none">&times;</button>
+            </span>`);
+        }
+      }
+      byId('tag-pills').innerHTML = pills.join('');
+    }
+
+    // CSS.escape fallback for attribute-selector values
+    function cssEscape(s) {
+      return (window.CSS && CSS.escape) ? CSS.escape(s) : String(s).replace(/["\\]/g, '\\$&');
+    }
+
+    // Close either dropdown when clicking outside it
+    document.addEventListener('click', (e) => {
+      for (const [wrapId, panelId] of [['brand-filter-wrap', 'brand-dd-panel'], ['tag-filter-wrap', 'tag-dd-panel']]) {
+        const wrap = byId(wrapId);
+        const panel = byId(panelId);
+        if (wrap && panel && !panel.classList.contains('hidden') && !wrap.contains(e.target)) {
+          panel.classList.add('hidden');
+        }
+      }
+    });
+
+    // Pull the best available media + meta out of an ad's raw_data. Handles both
+    // card-based ads (snapshot.cards[0]) and single-media ads (snapshot.videos/images).
+    function adMedia(ad) {
+      let snap = {};
+      try { snap = JSON.parse(ad.raw_data || '{}').snapshot || {}; } catch (e) {}
+      const card = (snap.cards && snap.cards[0]) || {};
+      const vid = (snap.videos && snap.videos[0]) || {};
+      const img = (snap.images && snap.images[0]) || {};
+      const video = card.videoHdUrl || card.videoSdUrl || vid.videoHdUrl || vid.videoSdUrl || null;
+      const image = card.originalImageUrl || card.resizedImageUrl
+        || img.originalImageUrl || img.resizedImageUrl
+        || card.videoPreviewImageUrl || vid.videoPreviewImageUrl || null;
+      return {
+        type: video ? 'video' : 'image',
+        video,
+        image,
+        cta: card.ctaText || snap.ctaText || null,
+        link: card.linkUrl || snap.linkUrl || null,
+        title: ad.ad_creative_link_titles || card.title || snap.title || null,
+        body: ad.ad_creative_bodies || card.body || snap.body || '',
+      };
+    }
+
+    // A reusable infinite-scroll feed of ad cards. Each instance owns its own
+    // grid/spinner/sentinel + pagination state, but shares renderAdCard/adsById.
+    function createAdFeed(cfg) {
+      const state = { offset: 0, hasMore: true, loading: false, observer: null };
+
+      function reset() {
+        state.offset = 0; state.hasMore = true; state.loading = false;
+        byId(cfg.gridId).innerHTML = '';
+        byId(cfg.emptyId).classList.add('hidden');
+        byId(cfg.endId).classList.add('hidden');
+        byId(cfg.countId).textContent = '';
+        ensureObserver();
+        fetchPage();
+      }
+
+      async function fetchPage() {
+        if (state.loading || !state.hasMore) return;
+        state.loading = true;
+        byId(cfg.spinnerId).classList.remove('hidden');
+        try {
+          const ads = await (await fetch(cfg.buildUrl(state.offset, ADS_PAGE_SIZE))).json();
+          const grid = byId(cfg.gridId);
+          if (Array.isArray(ads) && ads.length) {
+            for (const a of ads) adsById[a.id] = a;
+            grid.insertAdjacentHTML('beforeend', ads.map(renderAdCard).join(''));
+            state.offset += ads.length;
+            byId(cfg.countId).textContent = `${grid.childElementCount} ad${grid.childElementCount === 1 ? '' : 's'}`;
+          }
+          // A short page means we've hit the end.
+          if (!Array.isArray(ads) || ads.length < ADS_PAGE_SIZE) {
+            state.hasMore = false;
+            if (grid.childElementCount === 0) {
+              byId(cfg.emptyId).classList.remove('hidden');
+              byId(cfg.countId).textContent = '';
+            } else {
+              byId(cfg.endId).classList.remove('hidden');
+            }
+          }
+        } catch (err) {
+          state.hasMore = false;
+          const grid = byId(cfg.gridId);
+          if (grid.childElementCount === 0) {
+            grid.innerHTML = `<div class="col-span-full text-center text-red-600 text-sm py-10">Failed to load ads.</div>`;
+          } else {
+            toast('Failed to load more ads', 'error');
+          }
+        } finally {
+          state.loading = false;
+          byId(cfg.spinnerId).classList.add('hidden');
+          // Keep going if the page didn't fill the viewport.
+          if (state.hasMore && sentinelVisible()) fetchPage();
+        }
+      }
+
+      function sentinelVisible() {
+        const s = byId(cfg.sentinelId);
+        if (!s || s.offsetParent === null) return false;  // hidden panel => not visible
+        const r = s.getBoundingClientRect();
+        return r.top <= (window.innerHeight || document.documentElement.clientHeight) + 400;
+      }
+
+      function ensureObserver() {
+        if (state.observer) return;
+        state.observer = new IntersectionObserver((entries) => {
+          if (entries.some(e => e.isIntersecting)) fetchPage();
+        }, { rootMargin: '400px' });
+        state.observer.observe(byId(cfg.sentinelId));
+      }
+
+      return { reset };
+    }
+
+    // The Ads tab feed (honours brand/media/sort + the "bookmarked only" toggle)
+    const adsFeed = createAdFeed({
+      gridId: 'ads-grid', spinnerId: 'ads-spinner', endId: 'ads-end',
+      sentinelId: 'ads-sentinel', emptyId: 'ads-empty', countId: 'ads-count',
+      buildUrl: (offset, limit) => {
+        const params = new URLSearchParams();
+        const media = byId('filter-media').value;
+        const sort = byId('filter-sort').value;
+        const bookmarked = byId('filter-bookmarked').checked;
+        if (media) params.set('media_type', media);
+        if (sort) params.set('sort', sort);
+        params.set('limit', limit);
+        params.set('offset', offset);
+        for (const id of selectedBrandIds) params.append('brand_id', id);
+        // AI-tag filters: repeated params per dimension (e.g. asset_type=UGC&messaging_angle=FOMO)
+        for (const dim of Object.keys(selectedTags)) {
+          for (const v of selectedTags[dim]) params.append(dim, v);
+        }
+        return (bookmarked ? '/api/ads/bookmarked?' : '/api/ads?') + params.toString();
+      },
+    });
+
+    // The Bookmarks tab feed (always the bookmarked endpoint)
+    const bookmarksFeed = createAdFeed({
+      gridId: 'bm-grid', spinnerId: 'bm-spinner', endId: 'bm-end',
+      sentinelId: 'bm-sentinel', emptyId: 'bm-empty', countId: 'bm-count',
+      buildUrl: (offset, limit) => {
+        const params = new URLSearchParams();
+        params.set('sort', byId('bm-sort').value || 'newest');
+        params.set('limit', limit);
+        params.set('offset', offset);
+        return '/api/ads/bookmarked?' + params.toString();
+      },
+    });
+
+    // Filter changes reset their feed to page 1.
+    function loadAds() { adsFeed.reset(); }
+    function loadBookmarks() { bookmarksFeed.reset(); }
+
+    function renderAdCard(ad) {
+      const m = adMedia(ad);
+      const isVideo = m.type === 'video';
+
+      // Media-type badge (top-left)
+      const typeBadge = isVideo
+        ? '<span class="absolute top-2 left-2 z-10 text-[10px] font-bold uppercase tracking-wide text-white bg-black/70 px-2 py-0.5 rounded-full flex items-center gap-1">▶ Video</span>'
+        : '<span class="absolute top-2 left-2 z-10 text-[10px] font-bold uppercase tracking-wide text-white bg-black/70 px-2 py-0.5 rounded-full">🖼 Image</span>';
+
+      // 9:16 thumbnail. For both image and video we show the still image as the
+      // thumbnail (videos play in the modal); a play overlay hints it's a video.
+      const thumb = m.image
+        ? `<img src="${esc(m.image)}" loading="lazy" alt="" class="absolute inset-0 w-full h-full object-cover"
+             onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" />
+           <div class="absolute inset-0 bg-meta-bg items-center justify-center text-meta-muted text-xs" style="display:none">No preview</div>`
+        : `<div class="absolute inset-0 bg-meta-bg flex items-center justify-center text-meta-muted text-xs">No preview</div>`;
+
+      const playOverlay = isVideo
+        ? '<div class="absolute inset-0 flex items-center justify-center pointer-events-none"><div class="w-12 h-12 rounded-full bg-black/55 flex items-center justify-center text-white text-xl">▶</div></div>'
+        : '';
+
+      const bm = ad.is_bookmarked ? '★' : '☆';
+
+      return `
+        <div onclick="openAdModal(${Number(ad.id)})"
+          class="group bg-white rounded-lg border border-meta-border overflow-hidden flex flex-col cursor-pointer hover:shadow-md hover:border-meta-blue/40 transition">
+          <div class="relative aspect-[9/16] bg-black">
+            ${typeBadge}
+            ${thumb}
+            ${playOverlay}
+            <button onclick="event.stopPropagation(); toggleBookmark(${Number(ad.id)}, this)" title="Bookmark"
+              class="absolute top-2 right-2 z-10 w-8 h-8 rounded-full bg-white/90 hover:bg-white shadow flex items-center justify-center text-lg ${ad.is_bookmarked ? 'text-yellow-500' : 'text-meta-muted'}">${bm}</button>
+          </div>
+          <div class="p-3 flex flex-col gap-1">
+            <span class="text-sm font-bold text-meta-dark truncate">${esc(ad.brand_name || ad.page_name || 'Unknown')}</span>
+            <p class="text-sm text-meta-text/90 leading-snug line-clamp-2">${esc(m.title || m.body || 'Untitled ad')}</p>
+          </div>
+        </div>`;
+    }
+
+    async function toggleBookmark(id, btn) {
+      try {
+        const res = await fetch(`/api/ads/${id}/bookmark`, { method: 'POST' });
+        const data = await res.json();
+        if (!res.ok) { toast(data.error || 'Failed to bookmark', 'error'); return; }
+        const on = data.is_bookmarked;
+        if (adsById[id]) adsById[id].is_bookmarked = on;
+        if (btn) {
+          btn.textContent = on ? '★' : '☆';
+          btn.classList.toggle('text-yellow-500', on);
+          btn.classList.toggle('text-meta-muted', !on);
+        }
+        // When un-bookmarking, drop the card from whichever bookmarked view is showing it.
+        if (!on) {
+          if (currentTab === 'bookmarks') { closeAdModal(); loadBookmarks(); }
+          else if (currentTab === 'ads' && byId('filter-bookmarked').checked) { closeAdModal(); loadAds(); }
+        }
+      } catch (e) {
+        toast('Network error', 'error');
+      }
+    }
+
+    // ---------- Ad detail modal ----------
+    function openAdModal(id) {
+      const ad = adsById[id];
+      if (!ad) return;
+      const m = adMedia(ad);
+      const isVideo = m.type === 'video';
+
+      const media = isVideo && m.video
+        ? `<video src="${esc(m.video)}" controls autoplay playsinline ${m.image ? `poster="${esc(m.image)}"` : ''}
+             class="w-full max-h-[60vh] object-contain bg-black rounded-md"></video>`
+        : (m.image
+            ? `<img src="${esc(m.image)}" alt="" class="w-full max-h-[60vh] object-contain bg-black rounded-md" />`
+            : `<div class="w-full h-48 bg-meta-bg rounded-md flex items-center justify-center text-meta-muted text-sm">No media available</div>`);
+
+      const typeBadge = isVideo
+        ? '<span class="text-[10px] font-bold uppercase tracking-wide text-white bg-meta-dark px-2 py-0.5 rounded-full">▶ Video</span>'
+        : '<span class="text-[10px] font-bold uppercase tracking-wide text-white bg-meta-dark px-2 py-0.5 rounded-full">🖼 Image</span>';
+      const active = ad.is_active
+        ? '<span class="text-[10px] font-semibold uppercase tracking-wide text-green-700 bg-green-100 px-2 py-0.5 rounded-full">Active</span>'
+        : '<span class="text-[10px] font-semibold uppercase tracking-wide text-meta-muted bg-meta-bg px-2 py-0.5 rounded-full">Inactive</span>';
+
+      const headline = m.title ? `<h4 class="text-base font-bold text-meta-dark leading-snug">${esc(m.title)}</h4>` : '';
+      const copy = m.body
+        ? `<div><p class="text-xs font-semibold text-meta-muted uppercase tracking-wide mb-1">Ad copy</p>
+             <p class="text-sm text-meta-text whitespace-pre-line leading-relaxed">${esc(m.body)}</p></div>`
+        : '';
+      const cta = m.cta
+        ? `<div class="flex items-center gap-2">
+             <span class="text-xs font-semibold text-meta-blue bg-meta-blue/10 px-3 py-1 rounded-full">${esc(m.cta)}</span>
+             ${m.link ? `<a href="${esc(m.link)}" target="_blank" rel="noopener" class="text-xs text-meta-muted hover:underline truncate max-w-[60%]">${esc(m.link)}</a>` : ''}
+           </div>`
+        : '';
+      const date = ad.start_date ? `<span class="text-xs text-meta-muted">Running since ${esc(ad.start_date)}</span>` : '';
+      // Library link is deterministic from the archive ID (works for old + new ads).
+      const libUrl = ad.ad_library_id
+        ? `https://www.facebook.com/ads/library/?id=${encodeURIComponent(ad.ad_library_id)}`
+        : (ad.ad_snapshot_url || null);
+      const snapshot = libUrl
+        ? `<a href="${esc(libUrl)}" target="_blank" rel="noopener"
+             class="inline-flex items-center gap-1 bg-meta-blue hover:bg-meta-bluehover text-white text-sm font-semibold px-4 py-2 rounded-md shadow-sm transition-colors">
+             View in Meta Ad Library ↗</a>`
+        : '<span class="text-xs text-meta-muted">No Meta Ad Library link available</span>';
+
+      document.getElementById('ad-modal-body').innerHTML = `
+        <div class="grid md:grid-cols-2 gap-5">
+          <div>${media}</div>
+          <div class="flex flex-col gap-3">
+            <div class="flex items-center gap-2 flex-wrap">${typeBadge} ${active} ${date}</div>
+            <span class="text-lg font-bold text-meta-dark">${esc(ad.brand_name || ad.page_name || 'Unknown')}</span>
+            ${headline}
+            ${copy}
+            ${cta}
+            <div class="mt-auto pt-3">${snapshot}</div>
+          </div>
+        </div>
+        ${renderAiSection(ad)}`;
+      document.getElementById('ad-modal').classList.remove('hidden');
+    }
+
+    function closeAdModal() {
+      const modal = document.getElementById('ad-modal');
+      modal.classList.add('hidden');
+      // stop any playing video
+      const v = modal.querySelector('video');
+      if (v) { try { v.pause(); } catch (e) {} }
+      document.getElementById('ad-modal-body').innerHTML = '';
+    }
+
+    // ---------- AI analysis (5-dimension tags) ----------
+    const AI_LABELS = {
+      asset_type: 'Asset Type',
+      visual_format: 'Visual Format',
+      messaging_angle: 'Messaging Angle',
+      hook_tactic: 'Hook Tactic',
+      offer_type: 'Offer Type',
+    };
+
+    // Mirrors AD_TAXONOMY on the server — the allowed values per dimension.
+    const AI_TAXONOMY = {
+      asset_type: ['UGC', 'High Production', 'Static Image', 'Animation', 'Screen Recording', 'Stock Footage'],
+      visual_format: ['Talking Head', 'Product Demo', 'Unboxing', 'Before/After', 'Lifestyle', 'Testimonial', 'Tutorial', 'Text Overlay', 'Split Screen'],
+      messaging_angle: ['Problem/Solution', 'Social Proof', 'FOMO', 'Aspiration', 'Educational', 'Comparison', 'Emotional Story', 'Authority/Expert'],
+      hook_tactic: ['Pattern Interrupt', 'Question', 'Bold Claim', 'Curiosity Gap', 'Call Out', 'Shocking Statement', 'Relatable Scenario'],
+      offer_type: ['Percentage Off', 'Free Shipping', 'BOGO', 'Free Trial', 'Bundle Deal', 'Limited Time', 'No Offer'],
+    };
+    // Selected AI-tag filters: { dimension: Set(values) }
+    const selectedTags = {};
+    for (const d of Object.keys(AI_TAXONOMY)) selectedTags[d] = new Set();
+
+    // Inner content of the AI section: either the tags+summary or the analyze CTA.
+    function aiContentHtml(parsed, id) {
+      if (parsed && parsed.tags) {
+        const chips = Object.entries(AI_LABELS).map(([k, label]) => {
+          const v = parsed.tags[k];
+          if (!v) return '';
+          return `<div class="flex flex-col gap-1">
+              <span class="text-[10px] uppercase tracking-wide text-meta-muted">${label}</span>
+              <span class="self-start text-xs font-semibold text-meta-blue bg-meta-blue/10 px-2.5 py-1 rounded-full">${esc(v)}</span>
+            </div>`;
+        }).join('');
+        const summary = parsed.summary
+          ? `<p class="text-sm text-meta-text/90 mt-3 leading-relaxed">${esc(parsed.summary)}</p>` : '';
+        const meta = parsed.model
+          ? `<span class="text-[10px] text-meta-muted">via ${esc(parsed.model)}</span>` : '';
+        return `<div class="grid grid-cols-2 sm:grid-cols-3 gap-3">${chips}</div>${summary}
+          <div class="flex items-center gap-3 mt-3">
+            <button onclick="analyzeAd(${id})" class="text-xs font-semibold text-meta-blue hover:underline">↻ Re-analyze</button>
+            ${meta}
+          </div>`;
+      }
+      return `<button onclick="analyzeAd(${id})"
+          class="inline-flex items-center gap-1.5 bg-meta-blue hover:bg-meta-bluehover text-white text-sm font-semibold px-4 py-2 rounded-md shadow-sm transition-colors">✨ Analyze with AI</button>
+        <p class="text-xs text-meta-muted mt-2">Classifies this ad across 5 dimensions: asset type, visual format, messaging angle, hook tactic, and offer type.</p>`;
+    }
+
+    function renderAiSection(ad) {
+      let parsed = null;
+      try { parsed = ad.ai_analysis ? JSON.parse(ad.ai_analysis) : null; } catch (e) {}
+      return `<div class="mt-5 pt-4 border-t border-meta-border">
+          <h4 class="text-sm font-bold text-meta-dark mb-2">AI Analysis</h4>
+          <div id="ai-content">${aiContentHtml(parsed, Number(ad.id))}</div>
+        </div>`;
+    }
+
+    async function analyzeAd(id) {
+      const content = byId('ai-content');
+      if (content) {
+        content.innerHTML = `<div class="flex items-center gap-2 text-sm text-meta-muted py-2">
+          <span class="inline-block w-5 h-5 border-2 border-meta-border border-t-meta-blue rounded-full animate-spin"></span>
+          Analyzing creative with Gemini…</div>`;
+      }
+      try {
+        const res = await fetch(`/api/ads/${id}/analyze`, { method: 'POST' });
+        const data = await res.json();
+        if (!res.ok) {
+          if (content) content.innerHTML = `<p class="text-sm text-red-600 mb-2">${esc(data.error || 'Analysis failed')}</p>` + aiContentHtml(null, id);
+          toast(data.error || 'Analysis failed', 'error');
+          return;
+        }
+        if (adsById[id]) adsById[id].ai_analysis = JSON.stringify(data);
+        if (content) content.innerHTML = aiContentHtml(data, id);
+        toast('Analysis done', 'success');
+      } catch (e) {
+        if (content) content.innerHTML = `<p class="text-sm text-red-600 mb-2">Network error</p>` + aiContentHtml(null, id);
+        toast('Network error during analysis', 'error');
+      }
+    }
+
+    // ---------- Init ----------
+    renderTagOptions();   // build the AI-tag dropdown once
+    switchTab('brands');  // start on Brands tab
+  </script>
+</body>
+</html>

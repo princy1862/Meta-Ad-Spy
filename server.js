@@ -227,6 +227,15 @@ try {
   // Column already exists, ignore
 }
 
+// Add is_bookmarked column to ads if missing. The bookmark feature reads/writes
+// this column; on a fresh DB it isn't in CREATE TABLE, so add it here (no-op when
+// it already exists, e.g. on the current database).
+try {
+  db.exec(`ALTER TABLE ads ADD COLUMN is_bookmarked INTEGER DEFAULT 0`);
+} catch (e) {
+  // Column already exists, ignore
+}
+
 // Resolve an ad's primary media from its snapshot. Handles BOTH shapes the actor
 // returns: card-based ads (snapshot.cards[0]) and single-media ads where media
 // lives at the top level (snapshot.videos[0] / snapshot.images[0]).

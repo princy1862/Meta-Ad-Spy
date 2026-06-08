@@ -483,12 +483,6 @@ app.get('/', (req, res) => {
 app.get('/api/brands', (req, res) => {
   try {
     const brands = db.prepare('SELECT * FROM brands ORDER BY created_at DESC').all();
-
-    // Return mock data if database is empty (demo mode)
-    if (brands.length === 0) {
-      return res.json(getMockBrands());
-    }
-
     res.json(brands);
   } catch (error) {
     console.error('Get brands error:', error);
@@ -666,13 +660,6 @@ app.get('/api/ads', (req, res) => {
     params.push(limit, offset);
 
     const ads = db.prepare(sql).all(...params);
-
-    // Return mock data only for an unfiltered first page when the DB is empty (demo mode)
-    const hasTagFilter = AD_DIMENSIONS.some((d) => req.query[d]);
-    if (ads.length === 0 && offset === 0 && (!brandIds || brandIds.length === 0) && !media_type && !hasTagFilter) {
-      return res.json(getMockAds());
-    }
-
     res.json(ads);
   } catch (error) {
     console.error('Get ads error:', error);

@@ -601,11 +601,18 @@ app.put('/api/brands/:id', (req, res) => {
   }
 });
 
-// Delete brand
+// Delete brand (and its dependent ads + scrape jobs, which reference it via
+// foreign keys — those must go first or the delete hits a FK constraint).
 app.delete('/api/brands/:id', (req, res) => {
   try {
-    const result = db.prepare('DELETE FROM brands WHERE id = ?').run(req.params.id);
+    const brandId = req.params.id;
+    const deleteBrand = db.transaction((id) => {
+      db.prepare('DELETE FROM ads WHERE brand_id = ?').run(id);
+      db.prepare('DELETE FROM scrape_jobs WHERE brand_id = ?').run(id);
+      return db.prepare('DELETE FROM brands WHERE id = ?').run(id);
+    });
 
+    const result = deleteBrand(brandId);
     if (result.changes === 0) {
       return res.status(404).json({ error: 'Brand not found' });
     }

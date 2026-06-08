@@ -250,6 +250,19 @@ function extractMedia(snapshot) {
   return { videoUrl, imageUrl, isVideo: !!videoUrl };
 }
 
+// Coerce an Apify creative field to a plain string (or null) for SQLite.
+// The Meta Ad Library actor returns some fields (e.g. body) as objects like
+// { text: "...", markup: { __html: "..." } } rather than strings; binding an
+// object throws "Too few parameter values were provided". Extract the text.
+function asText(v) {
+  if (v == null) return null;
+  if (typeof v === 'string') return v;
+  if (typeof v === 'object') {
+    return v.text ?? v.markup?.__html ?? v.__html ?? JSON.stringify(v);
+  }
+  return String(v);
+}
+
 // Classify an ad's primary media as 'video' or 'image' from its raw_data
 function classifyMedia(rawDataStr) {
   try {
@@ -973,13 +986,13 @@ app.post('/api/scrape-jobs/:id/check', async (req, res) => {
           const result = insertAd.run(
             job.brand_id,
             archiveId,
-            ad.pageID || ad.pageId || null,
-            snapshot.pageName || ad.pageInfo?.page?.name || null,
+            asText(ad.pageID || ad.pageId || null),
+            asText(snapshot.pageName || ad.pageInfo?.page?.name || null),
             snapshotUrl,
-            card.body || snapshot.body || null,
-            card.caption || snapshot.caption || null,
-            card.title || snapshot.title || null,
-            card.linkDescription || snapshot.linkDescription || null,
+            asText(card.body || snapshot.body || null),
+            asText(card.caption || snapshot.caption || null),
+            asText(card.title || snapshot.title || null),
+            asText(card.linkDescription || snapshot.linkDescription || null),
             ad.isActive === false ? 0 : 1,
             startDate,
             JSON.stringify(ad),

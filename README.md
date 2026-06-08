@@ -1,4 +1,4 @@
-# Meta Ad Spy 🕵️
+# Meta Ad Spy
 
 A self-hosted tool for **scraping, browsing, and AI-analyzing the top-performing ads** that DTC (direct-to-consumer) brands run on Meta's Ad Library (Facebook & Instagram).
 

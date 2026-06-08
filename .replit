@@ -4,7 +4,12 @@ entrypoint = "server.js"
 [nix]
 channel = "stable-24_05"
 
+# Reserved VM keeps a persistent filesystem so the SQLite database
+# (db/app.db) survives restarts and redeploys. Do NOT use autoscale here —
+# its filesystem is ephemeral and would wipe scraped ads on every restart.
 [deployment]
+deploymentTarget = "vm"
+build = ["sh", "-c", "npm install"]
 run = ["sh", "-c", "npm start"]
 
 [[ports]]

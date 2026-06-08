@@ -1,0 +1,7 @@
+{
+  "name": "basic-ftp",
+  "version": "5.1.0",
+  "description": "Local no-op stub for basic-ftp. Replaces the real package (which Replit's Socket package firewall blocks) via an npm override. basic-ftp only powers ftp:// resolution deep inside apify-client's proxy-agent, which this app never uses, so the stub is never actually invoked at runtime.",
+  "main": "index.js",
+  "license": "MIT"
+}
